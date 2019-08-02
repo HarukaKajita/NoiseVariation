@@ -20,8 +20,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs: []
     m_Floats:
-    - _NoiseAmp: 15
-    - _NoiseLigic: 2
-    - _NoiseScale: 10
-    - _NoiseType: 0
+    - _NoiseAmp: 40
+    - _NoiseScale: 13
+    - _NoiseType: 1
     m_Colors: []
