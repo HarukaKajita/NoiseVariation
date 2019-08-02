@@ -3,6 +3,8 @@
     Properties
     {
         _NoiseScale ("Noise Scale", Range(0,100)) = 10
+        [Enum(Plain, 0, Gradient, 1, Divergence, 2, laplacian, 3)]
+        _NoiseLigic ("Noise Logic", int) = 0
         [Enum(value, 0, perlin, 1, cellular, 2, curl, 3, fbm, 4)]
         _NoiseType ("Noise Type", int) = 0
         _NoiseAmp ("Noise Amp", Range(0,100)) = 10
@@ -35,6 +37,7 @@
             };
 
             float _NoiseScale;
+            uint _NoiseLigic;
             uint _NoiseType;
             float _NoiseAmp;
 
@@ -52,7 +55,14 @@
             fixed4 frag (v2f i) : SV_Target
             {
                 float3 oPos = i.oPos;
-                fixed4 col = fixed4(gradientNoise(oPos, _NoiseScale, _NoiseType), 1);
+                fixed4 col = 1;
+                if(_NoiseLigic == 0){
+                    col.rgb = getNoise(oPos, _NoiseScale, _NoiseType);
+                } else if(_NoiseLigic == 1){
+                    col.rgb = gradientNoise(oPos, _NoiseScale, _NoiseType);
+                } else if(_NoiseLigic == 2){
+                    col.rgb = laplacianNoise(oPos, _NoiseScale, _NoiseType, _NoiseAmp);
+                }
                 //fixed4 col = (fixed4)divergenceNoise(oPos, _NoiseScale, _NoiseType, _NoiseAmp);
                 return col;
             }
