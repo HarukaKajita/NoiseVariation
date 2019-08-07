@@ -1,4 +1,4 @@
-﻿Shader "Noise/curl"
+﻿Shader "Noise/hoge"
 {
     Properties
     {
@@ -7,7 +7,8 @@
         _NoiseLigic ("Noise Logic", int) = 0
         [Enum(value, 0, perlin, 1, cellular, 2, curl, 3, fbm, 4)]
         _NoiseType ("Noise Type", int) = 0
-        _NoiseAmp ("Noise Amp", Range(0,100)) = 10
+        _NoiseAmp ("Noise Amp", Range(0,10)) = 10
+        _Epsilon ("Epsilon", Range(0,1)) = 1
     }
     SubShader
     {
@@ -37,7 +38,7 @@
             };
 
             float _NoiseScale;
-            uint _NoiseLigic;
+            float _Epsilon;
             uint _NoiseType;
             float _NoiseAmp;
 
@@ -55,7 +56,7 @@
             fixed4 frag (v2f i) : SV_Target
             {
                 float3 oPos = i.oPos;
-                fixed4 col = fixed4(curlNoise(i.oPos * _NoiseScale), 1);
+                fixed4 col = fixed4((fixed3)hogeNoise(i.oPos, _NoiseScale, _NoiseType, _NoiseAmp, _Epsilon), 1);
                 
                 //fixed4 col = (fixed4)divergenceNoise(oPos, _NoiseScale, _NoiseType, _NoiseAmp);
                 return col;

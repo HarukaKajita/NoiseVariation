@@ -1,20 +1,13 @@
-﻿Shader "Noise/NoiseTexture"
+﻿Shader "Noise/curl"
 {
     Properties
     {
         _NoiseScale ("Noise Scale", Range(0,100)) = 10
-        [Enum(value, 0, perlin, 1, cellular, 2)]
+        [Enum(Plain, 0, Gradient, 1, Divergence, 2, laplacian, 3)]
+        _NoiseLigic ("Noise Logic", int) = 0
+        [Enum(value, 0, perlin, 1, cellular, 2, curl, 3, fbm, 4)]
         _NoiseType ("Noise Type", int) = 0
-
-        [Toggle] _Use2ndNoise ("Use 2nd Noise", int) = 0
-        [Enum(fbm, 0, Curl, 1, Gradient, 2, Divergence, 3, laplacian, 4)]
-        _2ndNoiseType ("2nd Noise Type", int) = 0
-
-        [Toggle] _Use3rdNoise ("Use 3rd Noise", int) = 0
-        [Enum(fbm, 0, Curl, 1, Gradient, 2, Divergence, 3, laplacian, 4)]
-        _3rdNoiseType ("3rd Noise Type", int) = 0
-        
-        _NoiseAmp ("Noise Amp", Range(0,20)) = 10
+        _NoiseAmp ("Noise Amp", Range(0,100)) = 10
     }
     SubShader
     {
@@ -44,12 +37,11 @@
             };
 
             float _NoiseScale;
-            float _NoiseAmp;
+            uint _NoiseLigic;
             uint _NoiseType;
-            bool _Use2ndNoise;
-            uint _2ndNoiseType;
-            bool _Use3rdNoise;
-            uint _3rdNoiseType;
+            float _NoiseAmp;
+
+            //float3 getNoise(float3 pos, float scale, int type);
 
             v2f vert (appdata v)
             {
@@ -63,17 +55,13 @@
             fixed4 frag (v2f i) : SV_Target
             {
                 float3 oPos = i.oPos;
-                fixed4 col = 1;
-
-                if(_Use3rdNoise == true){
-                    //col.rgb = get3rdNoise(oPos, _NoiseScale, _3rdNoiseType, _2ndNoiseType, _NoiseType, _NoiseAmp);
-                } else if(_Use2ndNoise == true){
-                    col.rgb = get2ndNoise(oPos+10, _NoiseScale, _2ndNoiseType, _NoiseType, _NoiseAmp);
-                } else {
-                    col.rgb = getNoise(oPos, _NoiseScale, _NoiseType);
-                }
+                fixed4 col = fixed4(curlNoise(i.oPos * _NoiseScale, 1, 1), 1);
+                
+                //fixed4 col = (fixed4)divergenceNoise(oPos, _NoiseScale, _NoiseType, _NoiseAmp);
                 return col;
             }
+
+            
             ENDCG
         }
     }

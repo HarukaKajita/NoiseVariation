@@ -6,9 +6,9 @@ Material:
   m_ObjectHideFlags: 0
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
-  m_Name: Noise_curl
-  m_Shader: {fileID: 4800000, guid: 050e24f3fe2c2454bac8f44fe44fba0d, type: 3}
-  m_ShaderKeywords: 
+  m_Name: curl 1
+  m_Shader: {fileID: 4800000, guid: e03cf6144eb153f47bdf14980df2c9cb, type: 3}
+  m_ShaderKeywords: _USE2NDNOISE_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -19,8 +19,12 @@ Material:
     serializedVersion: 3
     m_TexEnvs: []
     m_Floats:
-    - _NoiseAmp: 10
-    - _NoiseLigic: 0
-    - _NoiseScale: 10
+    - _2ndNoiseType: 1
+    - _3rdNoiseType: 4
+    - _NoiseAmp: 7
+    - _NoiseLigic: 3
+    - _NoiseScale: 5
     - _NoiseType: 0
+    - _Use2ndNoise: 1
+    - _Use3rdNoise: 0
     m_Colors: []

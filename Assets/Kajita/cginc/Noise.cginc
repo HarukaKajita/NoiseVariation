@@ -14,7 +14,7 @@ float rand(float2 co)
 ///ret : 0.0 - <1.0
 float rand(float3 vec)
 {
-  return rand(dot(vec, float3(17.864342, 96.25642, 52.753978)));
+  return rand(dot(vec, float3(137.864342, 696.25642, 952.753978)));
 }
 
 
@@ -23,9 +23,9 @@ float rand(float3 vec)
 float3 rand3D(float3 vec)
 {
   
-  float rand1 = dot(vec, float3(127.1, 311.7, 264.7));
-  float rand2 = dot(vec, float3(269.5, 183.3, 336.2));
-  float rand3 = dot(vec, float3(301.7, 231.1, 142.6));
+  float rand1 = dot(vec, float3(6127.1, 311.7, 264.7));
+  float rand2 = dot(vec, float3(269.5, 1183.3, 336.2));
+  float rand3 = dot(vec, float3(301.7, 231.1, 4142.6));
   
   float3 rand = float3(rand1, rand2, rand3);
   return - 1.0 + 2.0 * frac(sin(rand) * 43758.5453123);
@@ -209,28 +209,7 @@ float pNoise(float3 pos)
   return lerp(noiseXZ0, noiseXZ1, sm.y);//yでブレンド
 }
 
-float2 pNoise2D(float2 pos)
-{
-  float2 pos_0 = pos;
-  float2 pos_1 = float2(pos.y, pos.x);//対称性が生まれそうだから工夫が必要かも
-  float n_0 = pNoise(pos_0);
-  float n_1 = pNoise(pos_1);
-  return float2(n_0, n_1);
-}
-
-float3 pNoise3D(float3 pos)
-{
-  float3 pos_0 = pos;
-  float3 pos_1 = float3(pos.y, pos.z, pos.x);
-  float3 pos_2 = float3(pos.z, pos.x, pos.y);
-  float n_0 = pNoise(pos_0);
-  float n_1 = pNoise(pos_1);
-  float n_2 = pNoise(pos_2);
-  return float3(n_0, n_1, n_2);
-}
-
 //Cellular Noise
-
 float cNoise(float2 pos)
 {
   float2 i_o = floor(pos);
@@ -300,70 +279,140 @@ float cNoise(float3 pos)
       }
     }
   }
-  return nearDist / 1.7320508;
+  return nearDist;
+  //return nearDist / 1.7320508;
+}
+
+//一次ノイズ(2D)
+float getNoise(float2 pos, float scale, int type)
+{
+  pos *= scale;
+  float value = 0;
+  if (type == 0)
+  {
+    value = valNoise(pos);
+  }
+  else if(type == 1)
+  {
+    value = pNoise(pos);
+  }
+  else if(type == 2)
+  {
+    value = cNoise(pos);
+  }
+  return value;
+}
+
+//一次ノイズ(3D)
+float getNoise(float3 pos, float scale, int type)
+{
+  pos *= scale;
+  float value = 0;
+  if (type == 0)
+  {
+    value = valNoise(pos);
+  }
+  else if(type == 1)
+  {
+    value = pNoise(pos);
+  }
+  else if(type == 2)
+  {
+    value = cNoise(pos);
+  }
+  return value;
+}
+
+//一次ノイズ(2Dベクトル)
+float2 getNoise2D(float2 pos, float scale, int type)
+{
+  pos *= scale;
+  float2 value = 0;
+  if (type == 0)
+  {
+    value.x = valNoise(pos);
+    value.y = valNoise(pos+10);
+  }
+  else if(type == 1)
+  {
+    value.x = pNoise(pos);
+    value.y = pNoise(pos+10);
+  }
+  else if(type == 2)
+  {
+    value.x = cNoise(pos);
+    value.y = cNoise(pos+10);
+  }
+  return value;
+}
+
+//一次ノイズ(3Dベクトル)
+float3 getNoise3D(float3 pos, float scale, int type)
+{
+  pos *= scale;
+  float3 value = 0;
+  if (type == 0)
+  {
+    value.x = valNoise(pos);
+    value.y = valNoise(pos+10);
+    value.z = valNoise(pos+100);
+  }
+  else if(type == 1)
+  {
+    value.x = pNoise(pos);
+    value.y = pNoise(pos+10);
+    value.z = pNoise(pos+100);
+  }
+  else if(type == 2)
+  {
+    value.x = cNoise(pos);
+    value.y = cNoise(pos+10);
+    value.z = cNoise(pos+100);
+  }
+  return normalize(value*2-1);
 }
 
 ///Curl Noise
-
-float2 curlNoise(float2 pos)
+//これおかしいのでどうしようかな
+float curlNoise(float2 pos, float scale, int type)
 {
   const float epsilon = 0.00001;
+  float2 n_px = getNoise2D(pos*scale + float2(epsilon, 0), 1 ,type);
+  float2 n_mx = getNoise2D(pos*scale - float2(epsilon, 0), 1 ,type);
+  float2 n_py = getNoise2D(pos*scale + float2(0, epsilon), 1 ,type);
+  float2 n_my = getNoise2D(pos*scale - float2(0, epsilon), 1 ,type);
   
-  float2 n_px = pNoise2D(pos + float2(epsilon, 0));
-  float2 n_mx = pNoise2D(pos - float2(epsilon, 0));
-  float2 n_py = pNoise2D(pos + float2(0, epsilon));
-  float2 n_my = pNoise2D(pos - float2(0, epsilon));
-  
-  float x = n_my.y - n_py.y;
-  float y = n_px.x - n_mx.x;
-  
-  return normalize(float2(x, y));
+  float z = n_mx.y - n_px.y - n_my.x + n_py.x;
+  //近傍を加減算してるから0に近いはず。
+  //3Dのカールノイズならnormalizeするけど、2D空間でカールノイズを考えるとZ軸の回転量しか算出されないのでスカラーになる。
+  //無理やりnormalizeを考えると1or-1を返す関数になってしまう。
+  //上手い事連続的な値を返すようにするには何か工夫が必要そう。
+  return z;
 }
 
-float3 curlNoise(float3 pos)
+float3 curlNoise(float3 pos, float scale, int type)
 {
-  const float epsilon = 0.00001;
+  const float epsilon = 0.001;
   
-  float3 n_px = pNoise3D(pos + float3(epsilon, 0, 0));
-  float3 n_mx = pNoise3D(pos - float3(epsilon, 0, 0));
-  float3 n_py = pNoise3D(pos + float3(0, epsilon, 0));
-  float3 n_my = pNoise3D(pos - float3(0, epsilon, 0));
-  float3 n_pz = pNoise3D(pos + float3(0, 0, epsilon));
-  float3 n_mz = pNoise3D(pos - float3(0, 0, epsilon));
+  float3 n_px = getNoise3D(pos*scale + float3(epsilon, 0, 0), 1, type);
+  float3 n_mx = getNoise3D(pos*scale - float3(epsilon, 0, 0), 1, type);
+  float3 n_py = getNoise3D(pos*scale + float3(0, epsilon, 0), 1, type);
+  float3 n_my = getNoise3D(pos*scale - float3(0, epsilon, 0), 1, type);
+  float3 n_pz = getNoise3D(pos*scale + float3(0, 0, epsilon), 1, type);
+  float3 n_mz = getNoise3D(pos*scale - float3(0, 0, epsilon), 1, type);
   
   float x = n_my.z - n_py.z - n_mz.y + n_pz.y;
   float y = n_px.z - n_mx.z - n_pz.x + n_mz.x;
   float z = n_mx.y - n_px.y - n_my.x + n_py.x;
-  
-  return normalize(float3(x, y, z));
-}
 
-///fBM
-
-float fbm(float2 uv)
-{
-  float gain = 0.5;
-  float freqIncrease = 2.0;
-  float octaves = 5;
-  
-  //default value
-  float amp = 0.5;
-  float fre = 1.0;
-  
-  float ret = 0.0;//return
-  
-  for (int i = 0; i < octaves; i ++)
-  {
-    //任意のノイズを使う
-    ret += pNoise(uv * fre) * amp;
-    fre *= freqIncrease;
-    amp *= gain;
-  }
+  float3 ret = normalize(float3(x, y, z));
   return ret;
 }
 
-float fbm(float3 pos)
+///fBM
+float fbm(float2 uv, float scale, int type)
 {
+  uv *= scale;
   float gain = 0.5;
   float freqIncrease = 2.0;
   float octaves = 5;
@@ -378,7 +427,7 @@ float fbm(float3 pos)
   for (int i = 0; i < octaves; i ++)
   {
     //任意のノイズを使う
-    ret += pNoise(pos * fre) * amp;
+    ret += getNoise(uv, fre, type) * amp;
     fre *= freqIncrease;
     maxValue += amp;
     amp *= gain;
@@ -386,124 +435,321 @@ float fbm(float3 pos)
   return ret / maxValue;
 }
 
-float2 getNoise(float2 pos, float scale, int type)
+float fbm(float3 pos, float scale, int type1st)
 {
   pos *= scale;
-  float2 value = 0;
-  if (type == 0)
+  float gain = 0.5;
+  float freqIncrease = 2.0;
+  float octaves = 5;
+  
+  //default value
+  float amp = 0.5;
+  float fre = 1.0;
+  
+  float maxValue = 0;
+  float ret = 0.0;//return
+  
+  for (int i = 0; i < octaves; i ++)
   {
-    value = valNoise(pos);
+    //任意のノイズを使う
+    ret += getNoise(pos, fre, type1st) * amp;
+    fre *= freqIncrease;
+    maxValue += amp;
+    amp *= gain;
   }
-  else if(type == 1)
-  {
-    value = pNoise(pos);
-  }
-  else if(type == 2)
-  {
-    value = cNoise(pos);
-  }
-  else if(type == 3)
-  {
-    value = curlNoise(pos);
-  }
-  else if(type == 4)
-  {
-    value = fbm(pos);
-  }
-  else
-  {
-    
-  }
-  return value;
-}
-
-float3 getNoise(float3 pos, float scale, int type)
-{
-  pos *= scale;
-  float3 value = 0;
-  if (type == 0)
-  {
-    value = valNoise(pos);
-  }
-  else if(type == 1)
-  {
-    value = pNoise(pos);
-  }
-  else if(type == 2)
-  {
-    value = cNoise(pos);
-  }
-  else if(type == 3)
-  {
-    value = curlNoise(pos);
-  }
-  else if(type == 4)
-  {
-    value = fbm(pos);
-  }
-  else
-  {
-    
-  }
-  return value;
+  return ret / maxValue;
 }
 
 ///Gradient
-float2 gradientNoise(float2 pos, float scale, int type)
+float2 gradientNoise(float2 pos, float scale, int type1st)
 {
   const float epsilon = 0.0001;
-  float center = getNoise(pos, scale, type);
-  float noise1 = getNoise(pos + float2(-epsilon, 0), scale, type);
-  float noise3 = getNoise(pos + float2(0, -epsilon), scale, type);
-
-  return normalize(float2(center - noise1, center - noise3))*0.5+0.5;
+  float center = 0;
+  float noiseX = 0;
+  float noiseY = 0;
+  //一次ノイズの勾配
+  center = getNoise(pos*scale, 1, type1st);
+  noiseX = getNoise(pos*scale - float2(epsilon, 0), 1, type1st);
+  noiseY = getNoise(pos*scale - float2(0, epsilon), 1, type1st);
+  
+  return normalize(float2(center - noiseX, center - noiseY));
 }
 
-float3 gradientNoise(float3 pos, float scale, int type)
+float3 gradientNoise(float3 pos, float scale, int type1st, float epsilon = 0.001)
+{
+  float center = 0;
+  float noiseX = 0;
+  float noiseY = 0;
+  float noiseZ = 0;
+  //一次ノイズの勾配
+  center = getNoise(pos*scale, 1, type1st);
+  noiseX = getNoise(pos*scale - float3(epsilon, 0, 0), 1, type1st);
+  noiseY = getNoise(pos*scale - float3(0, epsilon, 0), 1, type1st);
+  noiseZ = getNoise(pos*scale - float3(0, 0, epsilon), 1, type1st);  
+  
+  return normalize(float3(center - noiseX, center - noiseY, center - noiseZ));
+}
+
+float divergenceNoise(float2 pos, float scale, int type1st, float amp){
+  const float epsilon = 0.01;
+  float2 center = 0;
+  float noiseX = 0;
+  float noiseY = 0;
+  //一次ノイズの発散
+  center = getNoise2D(pos*scale, 1, type1st);
+  noiseX = getNoise2D(pos*scale - float2(epsilon, 0), 1, type1st).x;
+  noiseY = getNoise2D(pos*scale - float2(0, epsilon), 1, type1st).y;
+  
+  //適当にabsして値を盛る。数学的意味は無視。
+  return float(abs(center.x - noiseX) + abs(center.y - noiseY))*amp;
+}
+
+float divergenceNoise(float3 pos, float scale, int type1st, float amp){
+  const float epsilon = 0.01;
+  float3 center = 0;
+  float noiseX = 0;
+  float noiseY = 0;
+  float noiseZ = 0;
+  //一次ノイズの発散
+  center = getNoise3D(pos*scale, 1, type1st);
+  noiseX = getNoise3D(pos*scale - float3(epsilon, 0, 0), 1, type1st).x;
+  noiseY = getNoise3D(pos*scale - float3(0, epsilon, 0), 1, type1st).y;
+  noiseZ = getNoise3D(pos*scale - float3(0, 0, epsilon), 1, type1st).z;
+  
+  //適当にabsして値を盛る。数学的意味は無視。
+  return float(abs(center.x - noiseX) + abs(center.y - noiseY) + abs(center.z - noiseZ))*amp;
+}
+
+float laplacian (float2 pos, float scale, int type1st, float amp){
+  const float epsilon = 0.01;
+  float2 center = 0;
+  float noiseX = 0;
+  float noiseY = 0;
+  //一次ノイズの発散
+  center = gradientNoise(pos*scale, 1, type1st);
+  noiseX = gradientNoise(pos*scale - float2(epsilon, 0), 1, type1st).x;
+  noiseY = gradientNoise(pos*scale - float2(0, epsilon), 1, type1st).y;
+  
+  //適当にabsして値を盛る。数学的意味は無視。
+  return float(abs(center.x - noiseX) + abs(center.y - noiseY))*amp;
+}
+
+float laplacian (float3 pos, float scale, int type1st, float amp){
+  const float epsilon = 0.01;
+  float3 center = 0;
+  float noiseX = 0;
+  float noiseY = 0;
+  float noiseZ = 0;
+  float noiseX1 = 0;
+  float noiseY1 = 0;
+  float noiseZ1 = 0;
+  //一次ノイズの発散
+  //不連続性が目立つ問題は勾配のepsilonを調整し解消できたので0.3を引数に渡している
+  center = gradientNoise(pos*scale, 1, type1st, 0.3)*0.5+0.5;
+  noiseX1 = gradientNoise(pos*scale + float3(epsilon, 0, 0), 1, type1st, 0.3).x*0.5+0.5;
+  noiseY1 = gradientNoise(pos*scale + float3(0, epsilon, 0), 1, type1st, 0.3).y*0.5+0.5;
+  noiseZ1 = gradientNoise(pos*scale + float3(0, 0, epsilon), 1, type1st, 0.3).z*0.5+0.5;
+  noiseX = gradientNoise(pos*scale - float3(epsilon, 0, 0), 1, type1st, 0.3).x*0.5+0.5;
+  noiseY = gradientNoise(pos*scale - float3(0, epsilon, 0), 1, type1st, 0.3).y*0.5+0.5;
+  noiseZ = gradientNoise(pos*scale - float3(0, 0, epsilon), 1, type1st, 0.3).z*0.5+0.5;
+  
+  //適当にabsして値を盛る。数学的意味は無視。
+  return float(abs(center.x - noiseX) + abs(center.y - noiseY) + abs(center.z - noiseZ))*amp;
+  //return float((center.x - noiseX) + (center.y - noiseY) + (center.z - noiseZ))*amp;
+  //return float(abs(noiseX1 - noiseX) + abs(noiseY1 - noiseY) + abs(noiseZ1 - noiseZ))*amp;
+  //return noiseX1;
+  //return float((noiseX1 - noiseX) + (noiseY1 - noiseY) + (noiseZ1 - noiseZ))*amp;
+  //return abs(center.x - noiseX)*amp;
+}
+
+//二次ノイズ(3D)
+//fbm, curl, gradient, divergence, laplacian
+float2 get2ndNoise(float2 pos, float scale, int type2nd, int type1st, float divConst = 20){
+  float2 value = 0;
+  if(type2nd == 0){
+    value = (float2)fbm(pos, scale, type1st);
+  } else if(type2nd == 1){
+    value = (float2)curlNoise(pos, scale, type1st);
+  } else if(type2nd == 2){
+    value = gradientNoise(pos, scale, type1st).xy;
+  } else if(type2nd == 3){
+    value = (float2)divergenceNoise(pos, scale, type1st, divConst);
+  }
+  return value;
+}
+
+float3 get2ndNoise(float3 pos, float scale, int type2nd, int type1st, float divConst = 20){
+  float3 value = 0;
+  if(type2nd == 0){
+    value = (float3)fbm(pos, scale, type1st);
+  } else if(type2nd == 1){
+    value = curlNoise(pos, scale, type1st);
+  } else if(type2nd == 2){
+    value = gradientNoise(pos, scale, type1st);
+  } else if(type2nd == 3){
+    value = (float3)divergenceNoise(pos, scale, type1st, divConst);
+  } else if (type2nd == 4){
+    value = (float3)laplacian(pos, scale, type1st, divConst);
+  }
+  return value;
+}
+
+////////////////////再帰関数は定義できないので関数を三次ノイズ用に定義
+///Curl Noise
+//これおかしいのでどうしようかな
+float curlNoise_as3rdNoise(float2 pos, float scale, int type2nd, int type1st, float divConst = 20)
+{
+  const float epsilon = 0.00001;
+  float2 n_px = get2ndNoise(pos*scale + float2(epsilon, 0), 1, type2nd, type1st, divConst);
+  float2 n_mx = get2ndNoise(pos*scale - float2(epsilon, 0), 1, type2nd, type1st, divConst);
+  float2 n_py = get2ndNoise(pos*scale + float2(0, epsilon), 1, type2nd, type1st, divConst);
+  float2 n_my = get2ndNoise(pos*scale - float2(0, epsilon), 1, type2nd, type1st, divConst);
+  
+  float z = n_mx.y - n_px.y - n_my.x + n_py.x;
+  //近傍を加減算してるから0に近いはず。
+  //3Dのカールノイズならnormalizeするけど、2D空間でカールノイズを考えるとZ軸の回転量しか算出されないのでスカラーになる。
+  //無理やりnormalizeを考えると1or-1を返す関数になってしまう。
+  //上手い事連続的な値を返すようにするには何か工夫が必要そう。
+  return z;
+}
+
+float3 curlNoise_as3rdNoise(float3 pos, float scale, int type2nd, int type1st, float divConst = 20)
+{
+  const float epsilon = 0.00001;
+  
+  float3 n_px = get2ndNoise(pos*scale + float3(epsilon, 0, 0), 1, type2nd, type1st, divConst);
+  float3 n_mx = get2ndNoise(pos*scale - float3(epsilon, 0, 0), 1, type2nd, type1st, divConst);
+  float3 n_py = get2ndNoise(pos*scale + float3(0, epsilon, 0), 1, type2nd, type1st, divConst);
+  float3 n_my = get2ndNoise(pos*scale - float3(0, epsilon, 0), 1, type2nd, type1st, divConst);
+  float3 n_pz = get2ndNoise(pos*scale + float3(0, 0, epsilon), 1, type2nd, type1st, divConst);
+  float3 n_mz = get2ndNoise(pos*scale - float3(0, 0, epsilon), 1, type2nd, type1st, divConst);
+  
+  float x = n_my.z - n_py.z - n_mz.y + n_pz.y;
+  float y = n_px.z - n_mx.z - n_pz.x + n_mz.x;
+  float z = n_mx.y - n_px.y - n_my.x + n_py.x;
+
+  float3 ret = normalize(float3(x, y, z));
+  return ret;
+}
+
+///fBM
+float fbm_as3rdNoise(float2 uv, float scale, int type2nd, int type1st, float divConst = 20)
+{
+  uv *= scale;
+  float gain = 0.5;
+  float freqIncrease = 2.0;
+  float octaves = 5;
+  
+  //default value
+  float amp = 0.5;
+  float fre = 1.0;
+  
+  float ret = 0.0;//return
+  
+  for (int i = 0; i < octaves; i ++)
+  {
+    //任意のノイズを使う
+    ret += get2ndNoise(uv, fre, type2nd, type1st, divConst) * amp;
+    fre *= freqIncrease;
+    amp *= gain;
+  }
+  return ret;
+}
+
+float fbm_as3rdNoise(float3 pos, float scale, int type2nd, int type1st, float divConst = 20)
+{
+  pos *= scale;
+  float gain = 0.5;
+  float freqIncrease = 2.0;
+  float octaves = 5;
+  
+  //default value
+  float amp = 0.5;
+  float fre = 1.0;
+  
+  float maxValue = 0;
+  float ret = 0.0;//return
+  
+  for (int i = 0; i < octaves; i ++)
+  {
+    //任意のノイズを使う
+    ret += get2ndNoise(pos, fre, type2nd, type1st, divConst) * amp;
+    fre *= freqIncrease;
+    maxValue += amp;
+    amp *= gain;
+  }
+  return ret / maxValue;
+}
+
+///Gradient
+float2 gradientNoise_as3rdNoise(float2 pos, float scale, int type1st, int type2nd = 0, float divConst = 20)
 {
   const float epsilon = 0.0001;
+  float center = 0;
+  float noiseX = 0;
+  float noiseY = 0;
+  
+  //二次ノイズの勾配
+  center = get2ndNoise(pos*scale, 1, type2nd, type1st, divConst);
+  noiseX = get2ndNoise(pos*scale - float2(epsilon, 0), 1, type2nd, type1st, divConst);
+  noiseY = get2ndNoise(pos*scale - float2(0, epsilon), 1, type2nd, type1st, divConst);
+  
+  return normalize(float2(center - noiseX, center - noiseY));
+}
+
+float3 gradientNoise_as3rdNoise(float3 pos, float scale, int type1st, int type2nd = 0, float divConst = 20)
+{
+  const float epsilon = 0.0001;
+  float center = 0;
+  float noiseX = 0;
+  float noiseY = 0;
+  float noiseZ = 0;
+  
+  //二次ノイズの勾配
+  center = get2ndNoise(pos*scale, 1, type2nd, type1st, divConst);
+  noiseX = get2ndNoise(pos*scale - float3(epsilon, 0, 0), 1, type2nd, type1st, divConst);
+  noiseY = get2ndNoise(pos*scale - float3(0, epsilon, 0), 1, type2nd, type1st, divConst);
+  noiseZ = get2ndNoise(pos*scale - float3(0, 0, epsilon), 1, type2nd, type1st, divConst);
+  
+  return normalize(float3(center - noiseX, center - noiseY, center - noiseZ));
+}
+
+float divergenceNoise_as3rdNoise(float2 pos, float scale, int type1st, float amp, int type2nd = 0, float divConst = 20){
+  const float epsilon = 0.01;
+  float2 center = 0;
+  float noiseX = 0;
+  float noiseY = 0;
+  
+  //二次ノイズの発散
+  center = get2ndNoise(pos*scale, 1, type2nd, type1st, divConst);
+  noiseX = get2ndNoise(pos*scale - float2(epsilon, 0), 1, type2nd, type1st, divConst).x;
+  noiseY = get2ndNoise(pos*scale - float2(0, epsilon), 1, type2nd, type1st, divConst).y;
+  
+  //適当にabsして値を盛る。数学的意味は無視。
+  return float(abs(center.x - noiseX) + abs(center.y - noiseY))*amp;
+}
+
+float divergenceNoise_as3rdNoise(float3 pos, float scale, int type1st, float amp, int type2nd = 0, float divConst = 20){
+  const float epsilon = 0.01;
+  float3 center = 0;
+  float noiseX = 0;
+  float noiseY = 0;
+  float noiseZ = 0;
+  
+  //二次ノイズの発散
+  center = get2ndNoise(pos*scale, 1, type2nd, type1st, divConst);
+  noiseX = get2ndNoise(pos*scale - float3(epsilon, 0, 0), 1, type2nd, type1st, divConst).x;
+  noiseY = get2ndNoise(pos*scale - float3(0, epsilon, 0), 1, type2nd, type1st, divConst).y;
+  noiseZ = get2ndNoise(pos*scale - float3(0, 0, epsilon), 1,  type2nd, type1st, divConst).z;
+  
+  //適当にabsして値を盛る。数学的意味は無視。
+  return float(abs(center.x - noiseX) + abs(center.y - noiseY) + abs(center.z - noiseZ))*amp;
+}
+
+float hogeNoise(float3 pos, float scale, int type, float amp, float epsilon = 1){
   float center = getNoise(pos, scale, type);
-  float noise1 = getNoise(pos + float3(-epsilon, 0, 0), scale, type);
-  float noise3 = getNoise(pos + float3(0, -epsilon, 0), scale, type);
-  float noise5 = getNoise(pos + float3(0, 0, -epsilon), scale, type);
-
-  return normalize(float3(center - noise1, center - noise3, center - noise5))*0.5+0.5;
-}
-
-float divergenceNoise(float2 pos, float scale, int type, float amp){
-  const float epsilon = 0.01;
-  float center = getNoise(pos, scale, type);
-  float noise1 = getNoise(pos*scale + float2(-epsilon, 0), 1, type);
-  float noise3 = getNoise(pos*scale + float2(0, -epsilon), 1, type);
-
-  return float(abs(center - noise1) + abs(center - noise3))*amp;
-}
-
-float divergenceNoise(float3 pos, float scale, int type, float amp){
-  const float epsilon = 0.01;
-  float center = getNoise(pos, scale, type);
-  float noise1 = getNoise(pos*scale + float3(-epsilon, 0, 0), 1, type);
-  float noise3 = getNoise(pos*scale + float3(0, -epsilon, 0), 1, type);
-  float noise5 = getNoise(pos*scale + float3(0, 0, -epsilon), 1, type);
-
-  return float(abs(center - noise1) + abs(center - noise3) +abs(center - noise5))*amp;
-}
-
-float laplacianNoise(float2 pos, float scale, int type, float amp){
-  const float epsilon = 0.01;
-  float2 center = gradientNoise(pos, scale, type);
-  float2 noise1 = gradientNoise(pos*scale + float2(-epsilon, 0), 1, type);
-  float2 noise3 = gradientNoise(pos*scale + float2(0, -epsilon), 1, type);
-
-  return (abs(center - noise1) + abs(center - noise3))*amp;
-}
-
-float laplacianNoise(float3 pos, float scale, int type, float amp){
-  const float epsilon = 0.01;
-  float3 center = gradientNoise(pos, scale, type);
-  float3 noise1 = gradientNoise(pos*scale + float3(-epsilon, 0, 0), 1, type);
-  float3 noise3 = gradientNoise(pos*scale + float3(0, -epsilon, 0), 1, type);
-  float3 noise5 = gradientNoise(pos*scale + float3(0, 0, -epsilon), 1, type);
-
-  return (abs(center - noise1) + abs(center - noise3) +abs(center - noise5))*amp;
+  float noise1 = getNoise(pos*scale - float3(epsilon, 0, 0), 1, type);
+  float noise3 = getNoise(pos*scale - float3(0, epsilon, 0), 1, type);
+  float noise5 = getNoise(pos*scale - float3(0, 0, epsilon), 1, type);
+  return float(abs(center - noise1) + abs(center - noise3) + abs(center - noise5))*amp;
 }
